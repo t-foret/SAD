@@ -1003,7 +1003,7 @@ c        enddo
       return
       end
 
-      integer function itforderl(kl,av,i1,i2,kf,irtc)
+      integer*4 function itforderl(kl,av,i1,i2,kf,irtc) result(iv)
       use tfstk
       implicit none
       type (sad_descriptor) ,intent(in):: kf
@@ -1018,14 +1018,14 @@ c        enddo
         if(kf%k == ktfref)then
           v1=kl%rbody(i1)
           v2=kl%rbody(i2)
-          itforderl=merge(1,merge(0,-1,v1 == v2),v1 > v2)
+          iv=merge(1,merge(0,-1,v1 == v2),v1 > v2)
           return
         endif
       endif
       k1=kl%dbody(i1)
       k2=kl%dbody(i2)
       if(kf%k == ktfref)then
-        itforderl=itfcanonicalorder(k1,k2)
+        iv=itfcanonicalorder(k1,k2)
         return
 c        write(*,*)'itforderl ',i1,i2,itforderl
       else
@@ -1038,11 +1038,11 @@ c        write(*,*)'itforderl ',i1,i2,itforderl
         dtastk(isp)=k2
         kx=tfefunrefu(isp1,irtc)
         if(irtc /= 0)then
-          itforderl=-1
+          iv=-1
           return
         endif
         if(ktfnonrealq(kx))then
-          itforderl=-1
+          iv=-1
           irtc=itfmessage(9,'General::wrongval',
      $         '"Real number","as the result of order-function"')
           return
@@ -1056,16 +1056,16 @@ c        write(*,*)'itforderl ',i1,i2,itforderl
         kx1=tfefunrefu(isp1,irtc)
         isp=isp1-1
         if(irtc /= 0)then
-          itforderl=-1
+          iv=-1
           return
         endif
         if(ktfnonrealq(kx1))then
           irtc=itfmessage(9,'General::wrongval',
      $         '"Real number","as the result of order-function"')
-          itforderl=-1
+          iv=-1
           return
         endif
-        itforderl=merge(0,merge(1,-1,kx%k == 0),kx%k == kx1%k)
+        iv=merge(0,merge(1,-1,kx%k == 0),kx%k == kx1%k)
       endif
       return
       end
@@ -1097,7 +1097,7 @@ c        write(*,*)'itforderl ',i1,i2,itforderl
       type (sad_namtbl), pointer :: loc1,loc2
       type (sad_pat), pointer :: pat1,pat2
       type (sad_complex), pointer :: cx1,cx2
-      integer*8 icont1,icont2
+      integer*8 icont1,icont2,k1a,k2a
       integer*4 m1,m2,l,i,itfstringorder,itfpatorder
       real*8 d,v1,v2
       ix=-1
@@ -1207,6 +1207,18 @@ c        write(*,*)'itforderl ',i1,i2,itforderl
                   if(l /= 0)then
                     ix=l
                     return
+                  elseif(ktfnonrealq(kl1c%dbody(i)))then
+                    k1a=ktfaddr(kl1c%body(i))
+                    k2a=ktfaddr(kl2c%body(i))
+                    if(k1a /= k2a)then
+                      if(ilist(1,k1a-1) >= ilist(1,k2a-1))then
+                        call tflocal1(kl2c%dbody(i))
+                        kl2c%dbody(i)=dtfcopy1(kl1c%dbody(i))
+                      else
+                        call tflocal1(kl1c%dbody(i))
+                        kl1c%dbody(i)=dtfcopy1(kl2c%dbody(i))
+                      endif
+                    endif
                   endif
                 enddo
                 ix=0
